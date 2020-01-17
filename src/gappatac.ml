@@ -9,11 +9,9 @@
 open Format
 open Util
 open Pp
-open Term
 open Tacmach
 open Names
 open Coqlib
-open Libnames
 open Evarutil
 
 let global_env = ref Environ.empty_env
@@ -21,8 +19,6 @@ let global_evd = ref Evd.empty
 
 let existential_type evd ex = Evd.existential_type evd ex
 
-open Vars
-open Globnames
 open CErrors
 
 let generalize a = Proofview.V82.of_tactic (Tactics.generalize a)
@@ -40,8 +36,6 @@ let closed0 t = Vars.closed0 !global_evd t
 
 let eq_constr t1 t2 = eq_constr !global_evd t1 t2
 
-IFDEF COQ810 THEN
-
 let pr_constr t =
   let sigma, env = Vernacstate.Proof_global.get_current_context () in
   Printer.pr_econstr_env env sigma t
@@ -53,37 +47,15 @@ let binder_name = Context.binder_name
 let refine_no_check t gl =
   Refiner.refiner ~check:false (EConstr.Unsafe.to_constr t) gl
 
-ELSE
-
-let pr_constr = Printer.pr_econstr
-
-let constr_of_global = Universes.constr_of_global
-
-let binder_name x = x
-
-let refine_no_check = Tacmach.refine_no_check
-
-END
-
 let map_constr f t =
   EConstr.map !global_evd f t
 
 let keep a = Proofview.V82.of_tactic (Tactics.keep a)
 let convert_concl_no_check a b = Proofview.V82.of_tactic (Tactics.convert_concl_no_check a b)
 
-IFDEF COQ88 THEN
-let parse_entry e s = Pcoq.Gram.entry_parse e (Pcoq.Gram.parsable s)
-ELSE
 let parse_entry e s = Pcoq.Entry.parse e (Pcoq.Parsable.make s)
-END
 
-let coq_reference t1 t2 =
-  let th = lazy (coq_reference t1 t2) in
-  fun x -> lazy (Lazy.force th x)
-
-let find_reference t1 t2 =
-  let th = lazy (find_reference t1 t2) in
-  fun x -> lazy (Lazy.force th x)
+let coq_lib_ref n = lazy (lib_ref n)
 
 let is_global c t = is_global (Lazy.force c) t
 
@@ -142,114 +114,107 @@ type pred =
 
 (** {1 Symbols needed by the tactics} *)
 
-let coq_Logic = coq_reference "Gappa" ["Init"; "Logic"]
-let coq_False = coq_Logic "False"
-let coq_True = coq_Logic "True"
-let coq_eq = coq_Logic "eq"
-let coq_eq_refl = coq_Logic "eq_refl"
-let coq_not = coq_Logic "not"
-let coq_and = coq_Logic "and"
-let coq_or = coq_Logic "or"
+let coq_False = coq_lib_ref "core.False.type"
+let coq_True = coq_lib_ref "core.True.type"
+let coq_eq = coq_lib_ref "core.eq.type"
+let coq_eq_refl = coq_lib_ref "core.eq.refl"
+let coq_not = coq_lib_ref "core.not.type"
+let coq_and = coq_lib_ref "core.and.type"
+let coq_or = coq_lib_ref "core.or.type"
 
-let coq_ref_Datatypes = coq_reference "Gappa" ["Init"; "Datatypes"]
-let coq_Some = coq_ref_Datatypes "Some"
-let coq_cons = coq_ref_Datatypes "cons"
-let coq_nil = coq_ref_Datatypes "nil"
-let coq_bool = coq_ref_Datatypes "bool"
-let coq_true = coq_ref_Datatypes "true"
+let coq_Some = coq_lib_ref "core.option.Some"
+let coq_cons = coq_lib_ref "core.list.cons"
+let coq_nil = coq_lib_ref "core.list.nil"
+let coq_bool = coq_lib_ref "core.bool.type"
+let coq_true = coq_lib_ref "core.bool.true"
 
-let coq_ref_BinNums = coq_reference "Gappa" ["Numbers"; "BinNums"]
-let coq_Z0 = coq_ref_BinNums "Z0"
-let coq_Zpos = coq_ref_BinNums "Zpos"
-let coq_Zneg = coq_ref_BinNums "Zneg"
-let coq_xH = coq_ref_BinNums "xH"
-let coq_xI = coq_ref_BinNums "xI"
-let coq_xO = coq_ref_BinNums "xO"
+let coq_Z0 = coq_lib_ref "num.Z.Z0"
+let coq_Zpos = coq_lib_ref "num.Z.Zpos"
+let coq_Zneg = coq_lib_ref "num.Z.Zneg"
+let coq_xH = coq_lib_ref "num.pos.xH"
+let coq_xI = coq_lib_ref "num.pos.xI"
+let coq_xO = coq_lib_ref "num.pos.xO"
 
-let coq_ref_Rdefinitions = coq_reference "Gappa" ["Reals"; "Rdefinitions"]
-let coq_R = coq_ref_Rdefinitions "R"
-let coq_R0 = coq_ref_Rdefinitions "R0"
-let coq_R1 = coq_ref_Rdefinitions "R1"
-let coq_Rle = coq_ref_Rdefinitions "Rle"
-let coq_Rplus = coq_ref_Rdefinitions "Rplus"
-let coq_Ropp = coq_ref_Rdefinitions "Ropp"
-let coq_Rminus = coq_ref_Rdefinitions "Rminus"
-let coq_Rmult = coq_ref_Rdefinitions "Rmult"
-let coq_Rinv = coq_ref_Rdefinitions "Rinv"
-let coq_Rdiv = coq_ref_Rdefinitions "Rdiv"
-let coq_IZR = coq_ref_Rdefinitions "IZR"
-let coq_Rabs = coq_reference "Gappa" ["Reals"; "Rbasic_fun"] "Rabs"
-let coq_sqrt = coq_reference "Gappa" ["Reals"; "R_sqrt"] "sqrt"
-let coq_powerRZ = coq_reference "Gappa" ["Reals"; "Rfunctions"] "powerRZ"
+let coq_R = coq_lib_ref "reals.R.type"
+let coq_R0 = coq_lib_ref "reals.R.R0"
+let coq_R1 = coq_lib_ref "reals.R.R1"
+let coq_Rle = coq_lib_ref "reals.R.Rle"
+let coq_Rplus = coq_lib_ref "reals.R.Rplus"
+let coq_Ropp = coq_lib_ref "reals.R.Ropp"
+let coq_Rminus = coq_lib_ref "reals.R.Rminus"
+let coq_Rmult = coq_lib_ref "reals.R.Rmult"
+let coq_Rinv = coq_lib_ref "reals.R.Rinv"
+let coq_Rdiv = coq_lib_ref "reals.R.Rdiv"
+let coq_IZR = coq_lib_ref "reals.R.IZR"
+let coq_Rabs = coq_lib_ref "reals.R.Rabs"
+let coq_sqrt = coq_lib_ref "reals.R.sqrt"
+let coq_powerRZ = coq_lib_ref "reals.R.powerRZ"
 
-let coq_radix_val = find_reference "Gappa" ["Flocq"; "Core"; "Zaux"] "radix_val"
+let coq_convert_tree = coq_lib_ref "gappa.gappa_private.convert_tree"
+let coq_RTree = coq_lib_ref "gappa.gappa_private.RTree"
+let coq_rtTrue = coq_lib_ref "gappa.gappa_private.rtTrue"
+let coq_rtFalse = coq_lib_ref "gappa.gappa_private.rtFalse"
+let coq_rtAtom = coq_lib_ref "gappa.gappa_private.rtAtom"
+let coq_rtNot = coq_lib_ref "gappa.gappa_private.rtNot"
+let coq_rtAnd = coq_lib_ref "gappa.gappa_private.rtAnd"
+let coq_rtOr = coq_lib_ref "gappa.gappa_private.rtOr"
+let coq_rtImpl = coq_lib_ref "gappa.gappa_private.rtImpl"
+let coq_RAtom = coq_lib_ref "gappa.gappa_private.RAtom"
+let coq_raBound = coq_lib_ref "gappa.gappa_private.raBound"
+let coq_raRel = coq_lib_ref "gappa.gappa_private.raRel"
+let coq_raEq = coq_lib_ref "gappa.gappa_private.raEq"
+let coq_raLe = coq_lib_ref "gappa.gappa_private.raLe"
+let coq_raGeneric = coq_lib_ref "gappa.gappa_private.raGeneric"
+let coq_raFormat = coq_lib_ref "gappa.gappa_private.raFormat"
+let coq_RExpr = coq_lib_ref "gappa.gappa_private.RExpr"
+let coq_reUnknown = coq_lib_ref "gappa.gappa_private.reUnknown"
+let coq_reFloat2 = coq_lib_ref "gappa.gappa_private.reFloat2"
+let coq_reFloat10 = coq_lib_ref "gappa.gappa_private.reFloat10"
+let coq_reBpow2 = coq_lib_ref "gappa.gappa_private.reBpow2"
+let coq_reBpow10 = coq_lib_ref "gappa.gappa_private.reBpow10"
+let coq_rePow2 = coq_lib_ref "gappa.gappa_private.rePow2"
+let coq_rePow10 = coq_lib_ref "gappa.gappa_private.rePow10"
+let coq_reInteger = coq_lib_ref "gappa.gappa_private.reInteger"
+let coq_reBinary = coq_lib_ref "gappa.gappa_private.reBinary"
+let coq_reUnary = coq_lib_ref "gappa.gappa_private.reUnary"
+let coq_reRound = coq_lib_ref "gappa.gappa_private.reRound"
+let coq_mRndDN = coq_lib_ref "gappa.gappa_private.mRndDN"
+let coq_mRndNA = coq_lib_ref "gappa.gappa_private.mRndNA"
+let coq_mRndNE = coq_lib_ref "gappa.gappa_private.mRndNE"
+let coq_mRndUP = coq_lib_ref "gappa.gappa_private.mRndUP"
+let coq_mRndZR = coq_lib_ref "gappa.gappa_private.mRndZR"
+let coq_fFloat = coq_lib_ref "gappa.gappa_private.fFloat"
+let coq_fFloatx = coq_lib_ref "gappa.gappa_private.fFloatx"
+let coq_fFixed = coq_lib_ref "gappa.gappa_private.fFixed"
+let coq_boAdd = coq_lib_ref "gappa.gappa_private.boAdd"
+let coq_boSub = coq_lib_ref "gappa.gappa_private.boSub"
+let coq_boMul = coq_lib_ref "gappa.gappa_private.boMul"
+let coq_boDiv = coq_lib_ref "gappa.gappa_private.boDiv"
+let coq_uoAbs = coq_lib_ref "gappa.gappa_private.uoAbs"
+let coq_uoNeg = coq_lib_ref "gappa.gappa_private.uoNeg"
+let coq_uoInv = coq_lib_ref "gappa.gappa_private.uoInv"
+let coq_uoSqrt = coq_lib_ref "gappa.gappa_private.uoSqrt"
 
-let coq_ref_Gappa_Private = find_reference "Gappa" ["Gappa"; "Gappa_tactic"; "Gappa_Private"]
-let coq_convert_tree = coq_ref_Gappa_Private "convert_tree"
-let coq_RTree = coq_ref_Gappa_Private "RTree"
-let coq_rtTrue = coq_ref_Gappa_Private "rtTrue"
-let coq_rtFalse = coq_ref_Gappa_Private "rtFalse"
-let coq_rtAtom = coq_ref_Gappa_Private "rtAtom"
-let coq_rtNot = coq_ref_Gappa_Private "rtNot"
-let coq_rtAnd = coq_ref_Gappa_Private "rtAnd"
-let coq_rtOr = coq_ref_Gappa_Private "rtOr"
-let coq_rtImpl = coq_ref_Gappa_Private "rtImpl"
-let coq_RAtom = coq_ref_Gappa_Private "RAtom"
-let coq_raBound = coq_ref_Gappa_Private "raBound"
-let coq_raRel = coq_ref_Gappa_Private "raRel"
-let coq_raEq = coq_ref_Gappa_Private "raEq"
-let coq_raLe = coq_ref_Gappa_Private "raLe"
-let coq_raGeneric = coq_ref_Gappa_Private "raGeneric"
-let coq_raFormat = coq_ref_Gappa_Private "raFormat"
-let coq_RExpr = coq_ref_Gappa_Private "RExpr"
-let coq_reUnknown = coq_ref_Gappa_Private "reUnknown"
-let coq_reFloat2 = coq_ref_Gappa_Private "reFloat2"
-let coq_reFloat10 = coq_ref_Gappa_Private "reFloat10"
-let coq_reBpow2 = coq_ref_Gappa_Private "reBpow2"
-let coq_reBpow10 = coq_ref_Gappa_Private "reBpow10"
-let coq_rePow2 = coq_ref_Gappa_Private "rePow2"
-let coq_rePow10 = coq_ref_Gappa_Private "rePow10"
-let coq_reInteger = coq_ref_Gappa_Private "reInteger"
-let coq_reBinary = coq_ref_Gappa_Private "reBinary"
-let coq_reUnary = coq_ref_Gappa_Private "reUnary"
-let coq_reRound = coq_ref_Gappa_Private "reRound"
-let coq_mRndDN = coq_ref_Gappa_Private "mRndDN"
-let coq_mRndNA = coq_ref_Gappa_Private "mRndNA"
-let coq_mRndNE = coq_ref_Gappa_Private "mRndNE"
-let coq_mRndUP = coq_ref_Gappa_Private "mRndUP"
-let coq_mRndZR = coq_ref_Gappa_Private "mRndZR"
-let coq_fFloat = coq_ref_Gappa_Private "fFloat"
-let coq_fFloatx = coq_ref_Gappa_Private "fFloatx"
-let coq_fFixed = coq_ref_Gappa_Private "fFixed"
-let coq_boAdd = coq_ref_Gappa_Private "boAdd"
-let coq_boSub = coq_ref_Gappa_Private "boSub"
-let coq_boMul = coq_ref_Gappa_Private "boMul"
-let coq_boDiv = coq_ref_Gappa_Private "boDiv"
-let coq_uoAbs = coq_ref_Gappa_Private "uoAbs"
-let coq_uoNeg = coq_ref_Gappa_Private "uoNeg"
-let coq_uoInv = coq_ref_Gappa_Private "uoInv"
-let coq_uoSqrt = coq_ref_Gappa_Private "uoSqrt"
+let coq_rndNE = coq_lib_ref "gappa.round_def.rndNE"
+let coq_rndNA = coq_lib_ref "gappa.round_def.rndNA"
 
-let coq_ref_Fcore_Raux = find_reference "Gappa" ["Flocq"; "Core"; "Raux"]
-let coq_bpow = coq_ref_Fcore_Raux "bpow"
-let coq_rndDN = coq_ref_Fcore_Raux "Zfloor"
-let coq_rndUP = coq_ref_Fcore_Raux "Zceil"
-let coq_rndZR = coq_ref_Fcore_Raux "Ztrunc"
-let coq_ref_Gappa_round_def = find_reference "Gappa" ["Gappa"; "Gappa_round_def"]
-let coq_rndNE = coq_ref_Gappa_round_def "rndNE"
-let coq_rndNA = coq_ref_Gappa_round_def "rndNA"
-let coq_ref_Fcore_generic_fmt = find_reference "Gappa" ["Flocq"; "Core"; "Generic_fmt"]
-let coq_round = coq_ref_Fcore_generic_fmt "round"
-let coq_generic_format = coq_ref_Fcore_generic_fmt "generic_format"
-let coq_ref_Fcore_FLT = find_reference "Gappa" ["Flocq"; "Core"; "FLT"]
-let coq_FLT_format = coq_ref_Fcore_FLT "FLT_format"
-let coq_FLT_exp = coq_ref_Fcore_FLT "FLT_exp"
-let coq_ref_Fcore_FLX = find_reference "Gappa" ["Flocq"; "Core"; "FLX"]
-let coq_FLX_format = coq_ref_Fcore_FLX "FLX_format"
-let coq_FLX_exp = coq_ref_Fcore_FLX "FLX_exp"
-let coq_ref_Fcore_FIX = find_reference "Gappa" ["Flocq"; "Core"; "FIX"]
-let coq_FIX_format = coq_ref_Fcore_FIX "FIX_format"
-let coq_FIX_exp = coq_ref_Fcore_FIX "FIX_exp"
+let coq_radix_val = coq_lib_ref "flocq.zaux.radix_val"
+let coq_bpow = coq_lib_ref "flocq.raux.bpow"
+let coq_rndDN = coq_lib_ref "flocq.raux.Zfloor"
+let coq_rndUP = coq_lib_ref "flocq.raux.Zceil"
+let coq_rndZR = coq_lib_ref "flocq.raux.Ztrunc"
+
+let coq_round = coq_lib_ref "flocq.generic_fmt.round"
+let coq_generic_format = coq_lib_ref "flocq.generic_fmt.generic_format"
+
+let coq_FLT_format = coq_lib_ref "flocq.flt.FLT_format"
+let coq_FLT_exp = coq_lib_ref "flocq.flt.FLT_exp"
+
+let coq_FLX_format = coq_lib_ref "flocq.flx.FLX_format"
+let coq_FLX_exp = coq_lib_ref "flocq.flx.FLX_exp"
+
+let coq_FIX_format = coq_lib_ref "flocq.fix.FIX_format"
+let coq_FIX_exp = coq_lib_ref "flocq.fix.FIX_exp"
 
 (** {1 Reification from Coq user goal: the [gappa_quote] tactic} *)
 

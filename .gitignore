@@ -13,3 +13,5 @@ remake.exe
 *.glob
 *.cm?*
 .*.aux
+*.vos
+*.vok

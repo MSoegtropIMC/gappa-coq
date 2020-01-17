@@ -69,13 +69,27 @@ Qed.
 Inductive UnaryOp : Set :=
   | uoNeg | uoSqrt | uoAbs | uoInv.
 
+Register uoAbs as gappa.gappa_private.uoAbs.
+Register uoNeg as gappa.gappa_private.uoNeg.
+Register uoInv as gappa.gappa_private.uoInv.
+Register uoSqrt as gappa.gappa_private.uoSqrt.
+
 Inductive BinaryOp : Set :=
   | boAdd | boSub | boMul | boDiv.
+
+Register boAdd as gappa.gappa_private.boAdd.
+Register boSub as gappa.gappa_private.boSub.
+Register boMul as gappa.gappa_private.boMul.
+Register boDiv as gappa.gappa_private.boDiv.
 
 Inductive Format : Set :=
   | fFixed : Z -> Format
   | fFloat : Z -> Z -> Format
   | fFloatx : Z -> Format.
+
+Register fFloat as gappa.gappa_private.fFloat.
+Register fFloatx as gappa.gappa_private.fFloatx.
+Register fFixed as gappa.gappa_private.fFixed.
 
 Inductive Mode : Set :=
   | mRndDN
@@ -83,6 +97,12 @@ Inductive Mode : Set :=
   | mRndZR
   | mRndNE
   | mRndNA.
+
+Register mRndDN as gappa.gappa_private.mRndDN.
+Register mRndUP as gappa.gappa_private.mRndUP.
+Register mRndZR as gappa.gappa_private.mRndZR.
+Register mRndNE as gappa.gappa_private.mRndNE.
+Register mRndNA as gappa.gappa_private.mRndNA.
 
 (* represent an expression on real numbers *)
 Inductive RExpr :=
@@ -99,6 +119,19 @@ Inductive RExpr :=
   | reINR : positive -> RExpr
   | reIZR : Z -> RExpr
   | reRound : Format -> Mode -> RExpr -> RExpr.
+
+Register RExpr as gappa.gappa_private.RExpr.
+Register reUnknown as gappa.gappa_private.reUnknown.
+Register reInteger as gappa.gappa_private.reInteger.
+Register reFloat2 as gappa.gappa_private.reFloat2.
+Register reFloat10 as gappa.gappa_private.reFloat10.
+Register reUnary as gappa.gappa_private.reUnary.
+Register reBinary as gappa.gappa_private.reBinary.
+Register reBpow2 as gappa.gappa_private.reBpow2.
+Register reBpow10 as gappa.gappa_private.reBpow10.
+Register rePow2 as gappa.gappa_private.rePow2.
+Register rePow10 as gappa.gappa_private.rePow10.
+Register reRound as gappa.gappa_private.reRound.
 
 Scheme Equality for positive.
 Scheme Equality for Z.
@@ -117,6 +150,14 @@ Inductive RAtom :=
   | raGeneric : Format -> RExpr -> RAtom
   | raFormat : Format -> RExpr -> RAtom.
 
+Register RAtom as gappa.gappa_private.RAtom.
+Register raBound as gappa.gappa_private.raBound.
+Register raRel as gappa.gappa_private.raRel.
+Register raEq as gappa.gappa_private.raEq.
+Register raLe as gappa.gappa_private.raLe.
+Register raGeneric as gappa.gappa_private.raGeneric.
+Register raFormat as gappa.gappa_private.raFormat.
+
 Inductive RTree :=
   | rtTrue : RTree
   | rtFalse : RTree
@@ -125,6 +166,15 @@ Inductive RTree :=
   | rtAnd : RTree -> RTree -> RTree
   | rtOr : RTree -> RTree -> RTree
   | rtImpl : RTree -> RTree -> RTree.
+
+Register RTree as gappa.gappa_private.RTree.
+Register rtTrue as gappa.gappa_private.rtTrue.
+Register rtFalse as gappa.gappa_private.rtFalse.
+Register rtAtom as gappa.gappa_private.rtAtom.
+Register rtNot as gappa.gappa_private.rtNot.
+Register rtAnd as gappa.gappa_private.rtAnd.
+Register rtOr as gappa.gappa_private.rtOr.
+Register rtImpl as gappa.gappa_private.rtImpl.
 
 Section Convert.
 
@@ -215,6 +265,8 @@ Fixpoint convert_tree (t : RTree) : Prop :=
   | rtOr t1 t2 => (convert_tree t1) \/ (convert_tree t2)
   | rtImpl t1 t2 => (convert_tree t1) -> (convert_tree t2)
   end.
+
+Register convert_tree as gappa.gappa_private.convert_tree.
 
 Lemma decidable_atom :
   forall a, { convert_atom a } + { not (convert_atom a) }.
@@ -1136,7 +1188,7 @@ Definition trans :=
   trLeaf change_format_func change_format_prop ::
   trLeaf remove_unknown_func remove_unknown_prop ::
   trTree simplify_tree simplify_tree_correct ::
-  nil.
+  List.nil.
 
 Theorem prepare_goal :
   forall uv t,
@@ -1180,5 +1232,8 @@ Ltac gappa_prepare :=
   convert_apply ltac:(fun uv _ => generalize_all O O uv) ;
   convert_apply ltac:(fun uv g => refine (prepare_goal uv g _)) ;
   convert_apply ltac:(fun uv g => let g := eval vm_compute in g in change (convert_tree uv g)).
+
+Require Rregisternames.
+Require Flocq.Core.Registernames.
 
 Ltac gappa := abstract (gappa_prepare ; gappa_internal).

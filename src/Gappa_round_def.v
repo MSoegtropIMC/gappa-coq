@@ -110,3 +110,6 @@ Global Notation rndZR := Ztrunc (only parsing).
 Definition rndNE := ZnearestE.
 Definition rndNA := ZnearestA.
 Typeclasses Transparent rndNE rndNA.
+
+Register rndNE as gappa.round_def.rndNE.
+Register rndNA as gappa.round_def.rndNA.
